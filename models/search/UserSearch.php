@@ -15,6 +15,7 @@ class UserSearch extends Model
     public $status;
     public $registered_from;
     public $registered_to;
+    public $role;
 
     public function rules(): array
     {
@@ -22,6 +23,7 @@ class UserSearch extends Model
             ['id', 'integer'],
             [['email', 'phone'], 'string'],
             ['status', 'in', 'range' => UserStatus::values()],
+            ['role', 'string'],
             [['registered_from', 'registered_to'], 'date', 'format' => 'php:Y-m-d'],
         ];
     }
@@ -31,6 +33,7 @@ class UserSearch extends Model
         return array_merge((new User())->attributeLabels(), [
             'registered_from' => 'Зарегистрирован с',
             'registered_to' => 'Зарегистрирован по',
+            'role' => 'Роль',
         ]);
     }
 
@@ -52,6 +55,13 @@ class UserSearch extends Model
         $query->andFilterWhere(['id' => $this->id, 'status' => $this->status]);
         $query->andFilterWhere(['like', 'email', $this->email]);
         $query->andFilterWhere(['like', 'phone', $this->phone ? preg_replace('/[^\d+]/', '', $this->phone) : null]);
+        if ($this->role) {
+            $auth = \Yii::$app->authManager;
+            // user_id в auth_assignment — строка, поэтому список id, а не подзапрос (совместимо с PostgreSQL)
+            $ids = (new \yii\db\Query())->select('user_id')->from($auth->assignmentTable)
+                ->where(['item_name' => $this->role])->column($auth->db);
+            $query->andWhere(['id' => array_map('intval', $ids) ?: [0]]);
+        }
         if ($this->registered_from) {
             $query->andWhere(['>=', 'created_at', strtotime($this->registered_from . ' 00:00:00')]);
         }

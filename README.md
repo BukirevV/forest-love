@@ -38,7 +38,7 @@ mkdir -p storage web/uploads && chmod 0775 storage web/uploads
 | `jobs/` | SendSmsJob, SendEmailJob, ProcessPhotoJob, NotifyOwnerJob (9.3) |
 | `validators/` | CoordinateValidator, UrlListValidator, PhoneValidator (9.4) |
 | `controllers/` | Site, Auth, Map (JSON API), Tree, Ad, Cabinet, Planting, Photo, Payment (10) |
-| `modules/admin/` | модуль администрирования и модерации (11) |
+| `modules/admin/` | модуль администрирования и модерации (11), включая разделы «Пользователи» и «Права доступа» |
 | `views/`, `mail/` | макеты main/map/cabinet/auth, виды, шаблоны писем (12) |
 | `widgets/` | MapWidget, LinksWidget, LinksInputWidget, PhotoTimelineWidget, PhotoCaptureWidget, StatusBadgeWidget, BannerWidget, AdStatsWidget (13) |
 | `assets/`, `web/js`, `web/css`, `web/img` | Leaflet + markercluster, exifr, карта и форма посадки (14) |
@@ -46,6 +46,20 @@ mkdir -p storage web/uploads && chmod 0775 storage web/uploads
 | `config/` | web, console, common, container (DI), routes, params, test (16) |
 | `commands/` | rbac/init, user/create-admin, user/assign-role, species/import, cleanup/codes, cleanup/orphan-files, payment/sync, named/expire, ad/finish (17) |
 | `tests/` | Codeception: unit, functional, acceptance, фикстуры (20) |
+
+## Пользователи и права доступа (админка)
+
+Доступно роли «Администратор» (разрешение `manageUsers`):
+
+- **Пользователи** (`/admin/user`): поиск и фильтр по роли, создание пользователя с паролем, редактирование контактов
+  и статуса, отметка подтверждения email/телефона, блокировка, сброс сохранённых входов, удаление учётных записей
+  без данных, назначение ролей и отдельных разрешений, просмотр итоговых разрешений.
+- **Права доступа** (`/admin/access`): матрица «роль × разрешение», создание собственных ролей
+  (с наследованием прав других ролей), переименование и удаление пользовательских ролей, список пользователей роли.
+- Защита от потери доступа: нельзя снять с себя права администратора, заблокировать или удалить себя,
+  отнять `manageUsers` у роли «Администратор», удалить системные роли или оставить систему без администраторов.
+- `yii rbac/init` больше не стирает настройки, сделанные в админке (только добавляет недостающее);
+  полный сброс — `yii rbac/init --reset`.
 
 ## Принятые решения по открытым вопросам ТЗ (раздел 22)
 

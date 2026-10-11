@@ -8,3 +8,5 @@
 .diff-old { background: #fff1f1; }
 .diff-new { background: #effaf0; }
 .drag-handle { color: #999; }
+.access-matrix th:not(:first-child), .access-matrix td:not(:first-child) { width: 110px; }
+.access-matrix .form-check-input { width: 1.2rem; height: 1.2rem; }

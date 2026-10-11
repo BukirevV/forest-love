@@ -27,5 +27,6 @@ return [
         app\services\MapDataService::class => app\services\MapDataService::class,
         app\services\AdStatsService::class => app\services\AdStatsService::class,
         app\services\RateLimitService::class => app\services\RateLimitService::class,
+        app\services\AccessService::class => app\services\AccessService::class,
     ],
 ];

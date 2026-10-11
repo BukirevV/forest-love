@@ -26,6 +26,7 @@ $menu = [
     ['<i class="bi bi-tree"></i> Посадки', ['/admin/planting/index'], 'planting', Rbac::ROLE_ADMIN],
     ['<i class="bi bi-flower1"></i> Породы', ['/admin/species/index'], 'species', Rbac::MANAGE_SPECIES],
     ['<i class="bi bi-people"></i> Пользователи', ['/admin/user/index'], 'user', Rbac::MANAGE_USERS],
+    ['<i class="bi bi-shield-lock"></i> Права доступа', ['/admin/access/index'], 'access', Rbac::MANAGE_USERS],
     ['<i class="bi bi-credit-card"></i> Платежи', ['/admin/payment/index'], 'payment', Rbac::MANAGE_PAYMENTS],
     ['<i class="bi bi-building"></i> Рекламодатели', ['/admin/advertiser/index'], 'advertiser', Rbac::MANAGE_ADS],
     ['<i class="bi bi-megaphone"></i> Кампании', ['/admin/ad-campaign/index'], 'ad-campaign', Rbac::MANAGE_ADS],
