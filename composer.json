@@ -1,0 +1,90 @@
+{
+    "name": "forest-love/app",
+    "description": "Лес Любви — сервис регистрации и публикации посадок деревьев на публичной карте",
+    "type": "project",
+    "license": "proprietary",
+    "minimum-stability": "stable",
+    "require": {
+        "php": ">=8.2",
+        "ext-pdo": "*",
+        "ext-mbstring": "*",
+        "ext-intl": "*",
+        "ext-exif": "*",
+        "ext-fileinfo": "*",
+        "ext-json": "*",
+        "yiisoft/yii2": "~2.0.51",
+        "yiisoft/yii2-bootstrap5": "~2.0.4",
+        "yiisoft/yii2-symfonymailer": "~4.0",
+        "yiisoft/yii2-imagine": "~2.3",
+        "yiisoft/yii2-queue": "~2.3",
+        "yiisoft/yii2-httpclient": "~2.0",
+        "yiisoft/yii2-redis": "~2.0",
+        "giggsey/libphonenumber-for-php": "^8.13",
+        "vlucas/phpdotenv": "^5.6",
+        "npm-asset/leaflet": "^1.9",
+        "npm-asset/leaflet.markercluster": "^1.5",
+        "npm-asset/exifr": "^7.1",
+        "npm-asset/bootstrap-icons": "^1.11",
+        "npm-asset/glightbox": "^3.3",
+        "ezyang/htmlpurifier": "^4.17"
+    },
+    "require-dev": {
+        "yiisoft/yii2-debug": "~2.1",
+        "yiisoft/yii2-gii": "~2.2",
+        "yiisoft/yii2-faker": "~2.0",
+        "codeception/codeception": "^5.0",
+        "codeception/module-asserts": "^3.0",
+        "codeception/module-yii2": "^1.1",
+        "codeception/module-filesystem": "^3.0",
+        "codeception/verify": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "app\\": ""
+        }
+    },
+    "config": {
+        "process-timeout": 1800,
+        "allow-plugins": {
+            "yiisoft/yii2-composer": true
+        }
+    },
+    "scripts": {
+        "post-install-cmd": [
+            "yii\\composer\\Installer::postInstall"
+        ],
+        "post-create-project-cmd": [
+            "yii\\composer\\Installer::postCreateProject",
+            "yii\\composer\\Installer::postInstall"
+        ]
+    },
+    "extra": {
+        "yii\\composer\\Installer::postCreateProject": {
+            "setPermission": [
+                {
+                    "runtime": "0777",
+                    "web/assets": "0777",
+                    "web/uploads": "0777",
+                    "storage": "0777",
+                    "yii": "0755"
+                }
+            ]
+        },
+        "yii\\composer\\Installer::postInstall": {
+            "generateCookieValidationKey": [
+                "config/web.php"
+            ]
+        }
+    },
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://asset-packagist.org"
+        }
+    ],
+    "autoload-dev": {
+        "psr-4": {
+            "tests\\": "tests/"
+        }
+    }
+}

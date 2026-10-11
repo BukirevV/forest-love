@@ -1,0 +1,7 @@
+# Лес Любви — задачи по расписанию (crontab -u www-data deploy/crontab)
+APP=/var/www/forest
+*/15 * * * * php $APP/yii payment/sync          >> $APP/runtime/logs/cron.log 2>&1
+10 3 * * *   php $APP/yii cleanup/codes         >> $APP/runtime/logs/cron.log 2>&1
+20 3 * * *   php $APP/yii named/expire          >> $APP/runtime/logs/cron.log 2>&1
+30 3 * * *   php $APP/yii ad/finish             >> $APP/runtime/logs/cron.log 2>&1
+40 4 * * 0   php $APP/yii cleanup/orphan-files  >> $APP/runtime/logs/cron.log 2>&1

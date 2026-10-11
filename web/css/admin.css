@@ -1,0 +1,10 @@
+/* Админка */
+.admin-sidebar .nav-link { color: #333; border-radius: .375rem; }
+.admin-sidebar .nav-link.active { background: #e8f2e6; color: #234f2b; }
+.photo-select { position: relative; cursor: pointer; }
+.photo-select__check { position: absolute; top: 8px; left: 8px; width: 1.4rem; height: 1.4rem; z-index: 2; }
+.photo-select .card-img-top { aspect-ratio: 1; object-fit: cover; }
+.photo-select:has(.photo-select__check:checked) { outline: 3px solid #198754; }
+.diff-old { background: #fff1f1; }
+.diff-new { background: #effaf0; }
+.drag-handle { color: #999; }

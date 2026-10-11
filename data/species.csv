@@ -1,0 +1,19 @@
+name;latin_name;sort;description
+Дуб черешчатый;Quercus robur;10;Долговечное листопадное дерево
+Берёза повислая;Betula pendula;20;
+Сосна обыкновенная;Pinus sylvestris;30;
+Ель европейская;Picea abies;40;
+Липа мелколистная;Tilia cordata;50;
+Клён остролистный;Acer platanoides;60;
+Рябина обыкновенная;Sorbus aucuparia;70;
+Лиственница сибирская;Larix sibirica;80;
+Кедр сибирский;Pinus sibirica;90;
+Ясень обыкновенный;Fraxinus excelsior;100;
+Ольха чёрная;Alnus glutinosa;110;
+Черёмуха обыкновенная;Prunus padus;120;
+Яблоня лесная;Malus sylvestris;130;
+Ива белая;Salix alba;140;
+Вяз гладкий;Ulmus laevis;150;
+Каштан конский;Aesculus hippocastanum;160;
+Пихта сибирская;Abies sibirica;170;
+Осина;Populus tremula;180;

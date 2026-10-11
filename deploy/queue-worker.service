@@ -1,0 +1,14 @@
+# systemd-юнит обработчика очереди (SMS, письма, обработка фото)
+[Unit]
+Description=Forest Love queue worker
+After=network.target postgresql.service
+
+[Service]
+User=www-data
+WorkingDirectory=/var/www/forest
+ExecStart=/usr/bin/php /var/www/forest/yii queue/listen --verbose=0
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+# Приёмочные тесты в браузере (WebDriver/Chromium). Запуск: vendor/bin/codecept run acceptance
+actor: AcceptanceTester
+modules:
+    enabled:
+        - WebDriver:
+            url: http://127.0.0.1:8080/
+            browser: chrome
+            window_size: 1280x900
+        - Yii2:
+            part: [orm, fixtures]
+            entryScript: index-test.php

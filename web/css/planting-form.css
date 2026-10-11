@@ -1,0 +1,7 @@
+/* Форма посадки */
+.planting-step .step-num { display: inline-flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--forest, #2f6b3a); color: #fff; font-size: .9rem; margin-right: .35rem; }
+.picker-map { height: 360px; }
+@media (max-width: 575.98px) { .picker-map { height: 300px; } }
+.photo-capture img[data-photo-preview] { max-height: 320px; }
+.links-row .form-control { min-width: 0; }
+.planting-actions { position: sticky; bottom: 0; background: rgba(255,255,255,.95); padding: .75rem 0; z-index: 10; }
