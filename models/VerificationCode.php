@@ -4,7 +4,9 @@ namespace app\models;
 
 use app\enums\VerificationChannel;
 use app\enums\VerificationPurpose;
+use Random\RandomException;
 use Yii;
+use yii\base\Exception;
 use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
@@ -74,7 +76,15 @@ class VerificationCode extends ActiveRecord
      * Создаёт код подтверждения.
      * Для SMS — цифровой код длиной auth.codeLength; для email — длинный токен для ссылки.
      *
+     * @param User $user
+     * @param string $channel
+     * @param string $purpose
+     * @param string $target
+     * @param int|null $ttl
      * @return array{0: self, 1: string} [модель, открытый код]
+     * @throws RandomException
+     * @throws Exception
+     * @throws \yii\db\Exception
      */
     public static function create(User $user, string $channel, string $purpose, string $target, ?int $ttl = null): array
     {
@@ -113,7 +123,7 @@ class VerificationCode extends ActiveRecord
      */
     public static function hashCode(string $code): string
     {
-        $secret = $_ENV['COOKIE_VALIDATION_KEY', 'forest-love') . '|verification';
+        $secret = $_ENV['COOKIE_VALIDATION_KEY'] . '|verification';
         return hash_hmac('sha256', $code, (string)$secret);
     }
 
