@@ -113,7 +113,7 @@ class VerificationCode extends ActiveRecord
      */
     public static function hashCode(string $code): string
     {
-        $secret = env('COOKIE_VALIDATION_KEY', 'forest-love') . '|verification';
+        $secret = $_ENV['COOKIE_VALIDATION_KEY', 'forest-love') . '|verification';
         return hash_hmac('sha256', $code, (string)$secret);
     }
 

@@ -4,8 +4,8 @@
  * Компоненты, общие для web и console.
  */
 
-$smsDriver = env('SMS_DRIVER', 'file');
-$paymentDriver = env('PAYMENT_DRIVER', 'fake');
+$smsDriver = $_ENV['SMS_DRIVER'];
+$paymentDriver = $_ENV['PAYMENT_DRIVER'];
 
 return [
     'cache' => [
@@ -38,17 +38,17 @@ return [
     'mailer' => [
         'class' => yii\symfonymailer\Mailer::class,
         'viewPath' => '@app/mail',
-        'useFileTransport' => (bool)env('MAILER_USE_FILE_TRANSPORT', true),
+        'useFileTransport' => (bool)$_ENV['MAILER_USE_FILE_TRANSPORT'],
         'transport' => [
-            'dsn' => env('MAILER_DSN', 'null://null'),
+            'dsn' => $_ENV['MAILER_DSN'],
         ],
     ],
     'smsSender' => $smsDriver === 'http'
         ? [
             'class' => app\components\sms\HttpSmsSender::class,
-            'apiUrl' => env('SMS_API_URL'),
-            'apiKey' => env('SMS_API_KEY'),
-            'senderName' => env('SMS_SENDER_NAME', 'LesLubvi'),
+            'apiUrl' => $_ENV['SMS_API_URL'],
+            'apiKey' => $_ENV['SMS_API_KEY'],
+            'senderName' => $_ENV['SMS_SENDER_NAME'],
         ]
         : [
             'class' => app\components\sms\FileSmsSender::class,
@@ -56,15 +56,15 @@ return [
     'paymentGateway' => $paymentDriver === 'http'
         ? [
             'class' => app\components\payment\HttpPaymentGateway::class,
-            'apiUrl' => env('PAYMENT_API_URL'),
-            'shopId' => env('PAYMENT_SHOP_ID'),
-            'secretKey' => env('PAYMENT_SECRET_KEY'),
-            'webhookSecret' => env('PAYMENT_WEBHOOK_SECRET'),
-            'allowedIps' => array_filter(explode(',', (string)env('PAYMENT_WEBHOOK_IPS', ''))),
+            'apiUrl' => $_ENV['PAYMENT_API_URL'],
+            'shopId' => $_ENV['PAYMENT_SHOP_ID'],
+            'secretKey' => $_ENV['PAYMENT_SECRET_KEY'],
+            'webhookSecret' => $_ENV['PAYMENT_WEBHOOK_SECRET'],
+            'allowedIps' => array_filter(explode(',', (string)$_ENV['PAYMENT_WEBHOOK_IPS'])),
         ]
         : [
             'class' => app\components\payment\FakePaymentGateway::class,
-            'webhookSecret' => env('PAYMENT_WEBHOOK_SECRET', 'fake-secret'),
+            'webhookSecret' => $_ENV['PAYMENT_WEBHOOK_SECRET'],
         ],
     'storage' => [
         'class' => app\components\storage\LocalStorage::class,

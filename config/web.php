@@ -26,7 +26,7 @@ $config = [
     ],
     'components' => array_merge($common, [
         'request' => [
-            'cookieValidationKey' => env('COOKIE_VALIDATION_KEY', ''),
+            'cookieValidationKey' => $_ENV['COOKIE_VALIDATION_KEY'],
             'csrfCookie' => ['httpOnly' => true, 'secure' => !YII_DEBUG, 'sameSite' => 'Lax'],
             'parsers' => [
                 'application/json' => yii\web\JsonParser::class,

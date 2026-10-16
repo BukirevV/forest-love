@@ -2,9 +2,9 @@
 
 return [
     'appName' => 'Лес Любви',
-    'appUrl' => env('APP_URL', 'http://localhost'),
-    'adminEmail' => env('ADMIN_EMAIL', 'admin@example.com'),
-    'senderEmail' => env('SENDER_EMAIL', 'noreply@example.com'),
+    'appUrl' => $_ENV['APP_URL'],
+    'adminEmail' => $_ENV['ADMIN_EMAIL'],
+    'senderEmail' => $_ENV['SENDER_EMAIL'],
     'senderName' => 'Лес Любви',
     'bsVersion' => '5.x',
 
