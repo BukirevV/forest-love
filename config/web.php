@@ -55,7 +55,7 @@ $config = [
         ],
         'mailer' => [
             'class' => 'yii\swiftmailer\Mailer',
-            'viewPath' => '@app/mail', // или '@app/mail' для Basic
+            'viewPath' => '@app/mail',
             'useFileTransport' => false, // false - реальная отправка, true - сохранение в runtime/mail
             'transport' => [
                 'class' => 'Swift_SmtpTransport',
@@ -64,7 +64,7 @@ $config = [
                 'password' => $_ENV['ADMIN_EMAIL_PASSWORD'], // Пароль, созданный в Шаге 1!
                 'port' => 465, // Порт для SSL
                 'encryption' => 'ssl', // Тип шифрования
-                // Опционально: отключение проверки SSL-сертификата (см. примечание ниже)
+                // Опционально: отключение проверки SSL-сертификата
                 'streamOptions' => [
                     'ssl' => [
                         'verify_peer' => false,
