@@ -60,8 +60,8 @@ $config = [
             'transport' => [
                 'class' => 'Swift_SmtpTransport',
                 'host' => 'smtp.yandex.ru', // SMTP-сервер Яндекса
-                'username' => 'bukirevv@yandex.ru', // Ваш полный адрес почты
-                'password' => 'mybluwywoqafynfn', // Пароль, созданный в Шаге 1!
+                'username' => $_ENV['ADMIN_EMAIL'], // Ваш полный адрес почты
+                'password' => $_ENV['ADMIN_EMAIL_PASSWORD'], // Пароль, созданный в Шаге 1!
                 'port' => 465, // Порт для SSL
                 'encryption' => 'ssl', // Тип шифрования
                 // Опционально: отключение проверки SSL-сертификата (см. примечание ниже)
