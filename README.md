@@ -61,6 +61,29 @@ mkdir -p storage web/uploads && chmod 0775 storage web/uploads
 - `yii rbac/init` больше не стирает настройки, сделанные в админке (только добавляет недостающее);
   полный сброс — `yii rbac/init --reset`.
 
+## SMS Aero (отправка SMS)
+
+Модуль: `components/sms/smsaero/` (`SmsAeroSender`, `SmsAeroMessage`, `SmsAeroException`), API v2 `https://gate.smsaero.ru/v2`.
+
+1. В личном кабинете smsaero.ru получите API-ключ (раздел «Настройки → API») и согласуйте подпись отправителя.
+2. В `.env`:
+   ```
+   SMS_DRIVER=smsaero
+   SMSAERO_EMAIL=you@example.com
+   SMSAERO_API_KEY=ваш_ключ
+   SMSAERO_SIGN="SMS Aero"        # тестовая подпись или ваша одобренная
+   SMSAERO_CALLBACK_TOKEN=длинная_случайная_строка   # необязательно
+   ```
+3. Проверка: `php yii sms/check` — авторизация, баланс, список подписей, адрес callback.
+   Тестовая отправка: `php yii sms/send 79990000000 "Тест"`, статус: `php yii sms/status <id>`.
+
+Особенности:
+- SMS уходят через очередь (`SendSmsJob`), должен работать `php yii queue/listen`.
+- Ошибки без смысла повторять (400 — неверные данные, 402 — нет денег, 401 — неверный ключ) пишутся в лог `runtime/logs/sms.log` без повторов; сетевые ошибки и 5xx — повтор очередью.
+- Если задан `SMSAERO_CALLBACK_TOKEN`, статусы доставки приходят на `APP_URL/sms/callback/<токен>` и пишутся в лог. Адрес должен быть доступен из интернета.
+- Новые тексты SMS Aero проверяет на модерации (статус 8), первые сообщения могут задерживаться на 5–10 минут.
+- `SMS_DRIVER=file` (по умолчанию) — SMS пишутся в `runtime/sms`, для разработки.
+
 ## Принятые решения по открытым вопросам ТЗ (раздел 22)
 
 Значения по умолчанию, которые легко поменять:
