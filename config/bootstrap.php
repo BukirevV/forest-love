@@ -2,7 +2,7 @@
 
 /**
  * Загрузка переменных окружения из .env (секреты не хранятся в репозитории).
- * Подключается из config/web.php, config/console.php и config/test.php.
+ * Подключается из web/index.php и yii ДО Yii.php, а также из config/*.php (require_once).
  */
 
 $root = dirname(__DIR__);
@@ -46,5 +46,5 @@ if (!function_exists('env')) {
     }
 }
 
-Yii::setAlias('@storage', $root . '/storage');
-Yii::setAlias('@uploads', $root . '/web/uploads');
+// Псевдонимы @storage и @uploads задаются в config/*.php ('aliases'),
+// т.к. этот файл подключается до Yii.php (чтобы YII_ENV/YII_DEBUG брались из .env).
