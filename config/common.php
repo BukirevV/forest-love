@@ -93,6 +93,8 @@ return [
         'mutex' => yii\mutex\PgsqlMutex::class, // для MySQL: yii\mutex\MysqlMutex
         'ttr' => 300,
         'attempts' => 3,
+        // Журнал задач (запуск, выполнение, ошибки) → runtime/logs/queue.log
+        'as log' => yii\queue\LogBehavior::class,
     ],
     'log' => [
         'traceLevel' => YII_DEBUG ? 3 : 0,
@@ -117,6 +119,13 @@ return [
                 'class' => yii\log\FileTarget::class,
                 'categories' => ['sms*'],
                 'logFile' => '@runtime/logs/sms.log',
+                'logVars' => [],
+                'levels' => ['info', 'error', 'warning'],
+            ],
+            [
+                'class' => yii\log\FileTarget::class,
+                'categories' => ['yii\queue\*'],
+                'logFile' => '@runtime/logs/queue.log',
                 'logVars' => [],
                 'levels' => ['info', 'error', 'warning'],
             ],
