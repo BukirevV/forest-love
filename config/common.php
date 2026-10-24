@@ -4,7 +4,7 @@
  * Компоненты, общие для web и console.
  */
 
-$smsDriver = $_ENV['SMS_DRIVER'];
+$smsDriver = $_ENV['SMS_DRIVER'] ?? 'file'; // file | smsaero | http
 $paymentDriver = $_ENV['PAYMENT_DRIVER'];
 
 return [
@@ -43,16 +43,29 @@ return [
             'dsn' => $_ENV['MAILER_DSN'],
         ],
     ],
-    'smsSender' => $smsDriver === 'http'
-        ? [
+    'smsSender' => match ($smsDriver) {
+        // SMS Aero: https://smsaero.ru/integration/documentation/api/
+        'smsaero' => [
+            'class' => app\components\sms\smsaero\SmsAeroSender::class,
+            'email' => $_ENV['SMSAERO_EMAIL'] ?? null,
+            'apiKey' => $_ENV['SMSAERO_API_KEY'] ?? null,
+            'sign' => $_ENV['SMSAERO_SIGN'] ?? 'SMS Aero',
+            'apiUrl' => ($_ENV['SMSAERO_API_URL'] ?? '') ?: 'https://gate.smsaero.ru/v2',
+            // Статусы доставки: адрес вида https://site/sms/callback/<SMSAERO_CALLBACK_TOKEN>
+            'callbackUrl' => !empty($_ENV['SMSAERO_CALLBACK_TOKEN']) && !empty($_ENV['APP_URL'])
+                ? rtrim($_ENV['APP_URL'], '/') . '/sms/callback/' . $_ENV['SMSAERO_CALLBACK_TOKEN']
+                : null,
+        ],
+        'http' => [
             'class' => app\components\sms\HttpSmsSender::class,
             'apiUrl' => $_ENV['SMS_API_URL'],
             'apiKey' => $_ENV['SMS_API_KEY'],
             'senderName' => $_ENV['SMS_SENDER_NAME'],
-        ]
-        : [
+        ],
+        default => [
             'class' => app\components\sms\FileSmsSender::class,
         ],
+    },
     'paymentGateway' => $paymentDriver === 'http'
         ? [
             'class' => app\components\payment\HttpPaymentGateway::class,
@@ -80,6 +93,8 @@ return [
         'mutex' => yii\mutex\PgsqlMutex::class, // для MySQL: yii\mutex\MysqlMutex
         'ttr' => 300,
         'attempts' => 3,
+        // Журнал задач (запуск, выполнение, ошибки) → runtime/logs/queue.log
+        'as log' => yii\queue\LogBehavior::class,
     ],
     'log' => [
         'traceLevel' => YII_DEBUG ? 3 : 0,
@@ -104,6 +119,13 @@ return [
                 'class' => yii\log\FileTarget::class,
                 'categories' => ['sms*'],
                 'logFile' => '@runtime/logs/sms.log',
+                'logVars' => [],
+                'levels' => ['info', 'error', 'warning'],
+            ],
+            [
+                'class' => yii\log\FileTarget::class,
+                'categories' => ['yii\queue\*'],
+                'logFile' => '@runtime/logs/queue.log',
                 'logVars' => [],
                 'levels' => ['info', 'error', 'warning'],
             ],

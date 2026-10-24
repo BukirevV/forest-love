@@ -53,6 +53,26 @@ $config = [
         'assetManager' => [
             'appendTimestamp' => true,
         ],
+        'mailer' => [
+            'class' => 'yii\swiftmailer\Mailer',
+            'viewPath' => '@app/mail',
+            'useFileTransport' => false, // false - реальная отправка, true - сохранение в runtime/mail
+            'transport' => [
+                'class' => 'Swift_SmtpTransport',
+                'host' => 'smtp.yandex.ru', // SMTP-сервер Яндекса
+                'username' => $_ENV['ADMIN_EMAIL'], // Ваш полный адрес почты
+                'password' => $_ENV['ADMIN_EMAIL_PASSWORD'], // Пароль, созданный в Шаге 1!
+                'port' => 465, // Порт для SSL
+                'encryption' => 'ssl', // Тип шифрования
+                // Опционально: отключение проверки SSL-сертификата
+                'streamOptions' => [
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                    ],
+                ],
+            ],
+        ],
     ]),
     'params' => $params,
 ];
