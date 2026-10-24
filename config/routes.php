@@ -42,6 +42,7 @@ return [
     'payment/success/<id:\d+>' => 'payment/success',
     'payment/fail/<id:\d+>' => 'payment/fail',
     'POST payment/webhook/<provider:\w+>' => 'payment/webhook',
+    'POST sms/callback/<token:[\w-]+>' => 'sms-callback/index',
 
     'admin' => 'admin/default/index',
     'admin/<controller:[\w-]+>' => 'admin/<controller>/index',

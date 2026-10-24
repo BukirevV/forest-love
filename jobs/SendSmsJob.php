@@ -19,9 +19,18 @@ class SendSmsJob extends BaseObject implements RetryableJobInterface
     {
         /** @var SmsSenderInterface $sender */
         $sender = Yii::$app->get('smsSender');
-        if (!$sender->send($this->phone, $this->text)) {
-            throw new \RuntimeException("SMS to {$this->phone} not sent");
+        if ($sender->send($this->phone, $this->text)) {
+            return;
         }
+        // Провайдер сообщил об ошибке, повтор которой бесполезен (нет денег, неверные данные) — не повторяем
+        if (method_exists($sender, 'getLastError')) {
+            $error = $sender->getLastError();
+            if ($error !== null && method_exists($error, 'isRetryable') && !$error->isRetryable()) {
+                Yii::error("SMS to {$this->phone} rejected by provider: {$error->getMessage()}", 'sms');
+                return;
+            }
+        }
+        throw new \RuntimeException("SMS to {$this->phone} not sent");
     }
 
     public function getTtr(): int
