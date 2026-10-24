@@ -9,3 +9,4 @@
 !/storage/.gitkeep
 .env
 /tests/_output/*
+/deploy/update.conf

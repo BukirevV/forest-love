@@ -1,0 +1,3 @@
+# Скрипты для Linux-сервера всегда с LF, иначе bash не запустит их
+*.sh text eol=lf
+yii text eol=lf

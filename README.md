@@ -82,6 +82,30 @@ php yii import --user=admin@site.ru        # от чьего имени (по у
 
 Запускайте от пользователя веб-сервера, чтобы у загруженных файлов были правильные права: `sudo -u www-data php yii import`.
 
+## Обновление на сервере из GitHub
+
+```bash
+cd /var/www/forest-love
+sudo bash deploy/update.sh --check   # есть ли новые коммиты
+sudo bash deploy/update.sh           # обновить
+```
+
+Скрипт `deploy/update.sh`:
+1. останавливается, если на сервере вручную изменены файлы проекта (чтобы не потерять правки);
+2. забирает ветку с GitHub (по умолчанию `master`, другая — `--branch=имя`) и показывает новые коммиты;
+3. делает резервную копию базы в `/var/backups/forest-love` (последние 10, отключить — `--no-backup`);
+4. обновляет код; `.env`, загруженные фото, `runtime`, `storage` не затрагиваются;
+5. `composer install` — только если менялись `composer.json`/`composer.lock`;
+6. миграции, `rbac/init`, сброс кэша, права на папки для `www-data`;
+7. перезапускает обработчик очереди и php-fpm;
+8. если composer, миграция или другой шаг упали — возвращает код к предыдущей версии.
+
+Журнал — `/var/log/forest-love-update.log`. Настройки (ветка, путь к PHP и т.п.) — в `deploy/update.conf`, пример — в начале скрипта.
+
+Доступ к GitHub: если репозиторий закрытый, серверу нужен ключ развёртывания (Deploy key, только чтение):
+`ssh-keygen -t ed25519 -f ~/.ssh/forest_deploy -N ""`, публичный ключ — в GitHub → Settings → Deploy keys,
+затем `git remote set-url origin git@github.com:BukirevV/forest-love.git` и в `~/.ssh/config` — `IdentityFile ~/.ssh/forest_deploy` для `github.com`.
+
 ## Принятые решения по открытым вопросам ТЗ (раздел 22)
 
 Значения по умолчанию, которые легко поменять:
