@@ -27,6 +27,17 @@ class PhotoImportService
     /** Описания, которые камеры пишут сами, — это не подпись к фото. */
     private const JUNK_TEXT = '/^(olympus digital camera|sony dsc|dcim.*|default|image|picture|photo|untitled|\s*)$/iu';
 
+    /** Координаты по умолчанию для фото без GPS: [широта, долгота] или null. */
+    private ?array $defaultPoint = null;
+    /** Расстояние между соседними точками вокруг координат по умолчанию, м. */
+    private float $defaultSpacing = 5.0;
+    /** Номер следующего места на «подсолнухе» вокруг точки по умолчанию. */
+    private int $defaultSlot = 0;
+    /** Места, выданные в этом запуске (для пробного прогона, когда в базу ничего не пишется). */
+    private array $allocated = [];
+    /** Последний импорт/проверка взяли координаты по умолчанию. */
+    private bool $lastUsedDefault = false;
+
     public function __construct(
         private readonly ExifService $exif,
         private readonly MapDataService $mapData,
@@ -191,7 +202,7 @@ class PhotoImportService
      * Проверяет файл и собирает данные будущей карточки (метаданные + $overrides), ничего не сохраняя.
      * Используется и для пробного прогона.
      *
-     * @return array{mime: string, meta: array, species: TreeSpecies, coordsFromData: bool, plantedAt: ?string, named: bool}
+     * @return array{mime: string, meta: array, species: TreeSpecies, coordsFromData: bool, coordsFromDefault: bool, plantedAt: ?string, named: bool}
      * @throws DomainException
      */
     public function prepare(string $path, ?TreeSpecies $defaultSpecies = null, array $overrides = []): array
@@ -204,8 +215,10 @@ class PhotoImportService
             $meta['latitude'] = (float)$overrides['latitude'];
             $meta['longitude'] = (float)$overrides['longitude'];
         }
-        if ($meta['latitude'] === null || $meta['longitude'] === null) {
-            throw new DomainException($overrides ? 'Нет координат ни в данных импорта, ни в метаданных фото.' : 'В метаданных нет GPS-координат.');
+        $hasCoords = $meta['latitude'] !== null && $meta['longitude'] !== null;
+        if (!$hasCoords && $this->defaultPoint === null) {
+            throw new DomainException(($overrides ? 'Нет координат ни в данных импорта, ни в метаданных фото.' : 'В метаданных нет GPS-координат.')
+                . ' Укажите координаты по умолчанию: --lat=… --lon=…');
         }
         foreach (['title', 'description'] as $field) {
             if (isset($overrides[$field]) && trim((string)$overrides[$field]) !== '') {
@@ -223,7 +236,16 @@ class PhotoImportService
             throw new DomainException('Для именного дерева нужно имя (поле "name").');
         }
 
-        return compact('mime', 'meta', 'species', 'coordsFromData', 'plantedAt', 'named');
+        // Координаты по умолчанию берутся последними, чтобы не занимать место под фото, которое всё равно не пройдёт
+        $coordsFromDefault = false;
+        $this->lastUsedDefault = false;
+        if (!$hasCoords) {
+            [$meta['latitude'], $meta['longitude']] = $this->nextDefaultPoint();
+            $coordsFromDefault = true;
+            $this->lastUsedDefault = true;
+        }
+
+        return compact('mime', 'meta', 'species', 'coordsFromData', 'coordsFromDefault', 'plantedAt', 'named');
     }
 
     /**
@@ -231,7 +253,7 @@ class PhotoImportService
      * в базе и хранилище ничего не остаётся.
      *
      * Данные из метаданных можно переопределить ($overrides, например из import/plantings.json):
-     *  - latitude, longitude — координаты (иначе из EXIF);
+     *  - latitude, longitude — координаты (иначе из EXIF, а если и там нет — по умолчанию, см. setDefaultCoordinates());
      *  - species — порода (TreeSpecies);
      *  - title, description, planted_at (Y-m-d);
      *  - named — сделать дерево именным (бессрочно или до named_until, timestamp);
@@ -243,7 +265,9 @@ class PhotoImportService
     public function import(string $path, User $owner, ?TreeSpecies $defaultSpecies = null, array $overrides = []): Planting
     {
         ['mime' => $mime, 'meta' => $meta, 'species' => $species, 'coordsFromData' => $coordsFromData,
-            'plantedAt' => $plantedAt, 'named' => $named] = $this->prepare($path, $defaultSpecies, $overrides);
+            'coordsFromDefault' => $coordsFromDefault, 'plantedAt' => $plantedAt, 'named' => $named]
+            = $this->prepare($path, $defaultSpecies, $overrides);
+        $manualCoords = $coordsFromData || $coordsFromDefault;
 
         $takenAt = $meta['date'] ?? $plantedAt ?? date('Y-m-d', (int)filemtime($path));
         $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION)) ?: 'jpg';
@@ -258,7 +282,7 @@ class PhotoImportService
                 'species_id' => $species->id,
                 'latitude' => $meta['latitude'],
                 'longitude' => $meta['longitude'],
-                'coords_source' => $coordsFromData ? CoordsSource::Manual->value : CoordsSource::Exif->value,
+                'coords_source' => $manualCoords ? CoordsSource::Manual->value : CoordsSource::Exif->value,
                 'planted_at' => $plantedAt,
                 'title' => $meta['title'] !== null ? mb_substr($meta['title'], 0, 150) : null,
                 'description' => $meta['description'] !== null ? mb_substr($meta['description'], 0, 5000) : null,
@@ -278,8 +302,8 @@ class PhotoImportService
                 'user_id' => $owner->id,
                 'file_path' => $storedPath,
                 'taken_at' => $takenAt,
-                'exif_latitude' => $coordsFromData ? null : $meta['latitude'],
-                'exif_longitude' => $coordsFromData ? null : $meta['longitude'],
+                'exif_latitude' => $manualCoords ? null : $meta['latitude'],
+                'exif_longitude' => $manualCoords ? null : $meta['longitude'],
                 'source' => PhotoSource::Upload->value,
                 'width' => (int)$size[0],
                 'height' => (int)$size[1],
@@ -301,6 +325,7 @@ class PhotoImportService
 
             $comment = 'Импорт из файла ' . basename($path)
                 . ($named ? ', именное: ' . $planting->title : '')
+                . ($coordsFromDefault ? ', координаты по умолчанию (в фото нет GPS)' : '')
                 . (!empty($overrides['comment']) ? '. Примечание: ' . $overrides['comment'] : '');
             ModerationLog::log($planting, ModerationAction::Approve, mb_substr($comment, 0, 1000), $owner->id);
             $tx->commit();
@@ -324,6 +349,87 @@ class PhotoImportService
         }
 
         return $planting;
+    }
+
+    /**
+     * Координаты для фото без GPS. Каждое такое фото получает своё место рядом с точкой:
+     * места выдаются по спирали «подсолнуха» (первое — в самой точке, дальше — равномерно вокруг),
+     * соседние места — примерно в $spacing метрах друг от друга. Места, где уже есть посадки
+     * (в том числе из прошлых запусков), пропускаются — точки на карте не накладываются.
+     */
+    public function setDefaultCoordinates(float $latitude, float $longitude, float $spacing = 5.0): void
+    {
+        if (abs($latitude) > 90 || abs($longitude) > 180) {
+            throw new DomainException('Координаты по умолчанию вне допустимого диапазона.');
+        }
+        if ($spacing < 0.5 || $spacing > 1000) {
+            throw new DomainException('Расстояние между точками должно быть от 0.5 до 1000 м.');
+        }
+        $this->defaultPoint = [$latitude, $longitude];
+        $this->defaultSpacing = $spacing;
+        $this->defaultSlot = 0;
+        $this->allocated = [];
+    }
+
+    public function hasDefaultCoordinates(): bool
+    {
+        return $this->defaultPoint !== null;
+    }
+
+    public function lastUsedDefaultCoordinates(): bool
+    {
+        return $this->lastUsedDefault;
+    }
+
+    /**
+     * Следующее свободное место вокруг точки по умолчанию.
+     *
+     * @return array{0: float, 1: float}
+     */
+    public function nextDefaultPoint(): array
+    {
+        [$lat0, $lon0] = $this->defaultPoint;
+        $metersPerDegLat = 111320.0;
+        $metersPerDegLon = 111320.0 * max(cos(deg2rad($lat0)), 0.01);
+        $golden = M_PI * (3 - sqrt(5)); // ≈137.5°: точки ложатся равномерно, без «лучей»
+        $minDistance = $this->defaultSpacing * 0.7;
+
+        for ($tries = 0; $tries < 10000; $tries++) {
+            $n = $this->defaultSlot++;
+            $r = $this->defaultSpacing * sqrt($n);
+            $angle = $n * $golden;
+            $lat = round($lat0 + ($r * cos($angle)) / $metersPerDegLat, 7);
+            $lon = round($lon0 + ($r * sin($angle)) / $metersPerDegLon, 7);
+            if (!$this->isOccupied($lat, $lon, $minDistance, $metersPerDegLat, $metersPerDegLon)) {
+                $this->allocated[] = [$lat, $lon];
+                return [$lat, $lon];
+            }
+        }
+        throw new DomainException('Не удалось подобрать свободное место рядом с координатами по умолчанию.');
+    }
+
+    private function isOccupied(float $lat, float $lon, float $meters, float $mLat, float $mLon): bool
+    {
+        foreach ($this->allocated as [$aLat, $aLon]) {
+            if (hypot(($aLat - $lat) * $mLat, ($aLon - $lon) * $mLon) < $meters) {
+                return true;
+            }
+        }
+        $dLat = $meters / $mLat;
+        $dLon = $meters / $mLon;
+        $rows = Planting::find()
+            ->select(['latitude', 'longitude'])
+            ->where(['between', 'latitude', $lat - $dLat, $lat + $dLat])
+            ->andWhere(['between', 'longitude', $lon - $dLon, $lon + $dLon])
+            ->andWhere(['<>', 'status', PlantingStatus::Hidden->value])
+            ->asArray()
+            ->all();
+        foreach ($rows as $row) {
+            if (hypot(((float)$row['latitude'] - $lat) * $mLat, ((float)$row['longitude'] - $lon) * $mLon) < $meters) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

@@ -21,6 +21,8 @@ use yii\helpers\FileHelper;
  *   yii import --species="Дуб черешчатый"  — порода для фото, у которых её нет в метаданных (название или ID)
  *   yii import --user=admin@site.ru    — от чьего имени создавать (email, телефон или ID; по умолчанию — первый администратор)
  *   yii import --dry-run               — только показать, что будет импортировано, ничего не создавая и не перемещая
+ *   yii import --lat=54.6703 --lon=38.2469  — координаты для фото без GPS (и записей JSON с "coordinates": null)
+ *   yii import --lat=… --lon=… --spread=8   — расстояние между такими точками, м (по умолчанию 5)
  *
  * Из метаданных берутся GPS-координаты (обязательны), дата съёмки (дата посадки),
  * заголовок и описание (XMP / IPTC / EXIF), ключевые слова — для определения породы.
@@ -61,6 +63,18 @@ class ImportController extends Controller
      * @var string файл с данными посадок (если его нет — импорт только по метаданным фото)
      */
     public string $json = '@app/import/plantings.json';
+    /**
+     * @var string|null широта по умолчанию для фото без координат (например 54.6703)
+     */
+    public ?string $lat = null;
+    /**
+     * @var string|null долгота по умолчанию для фото без координат (например 38.2469)
+     */
+    public ?string $lon = null;
+    /**
+     * @var string расстояние между точками без координат, м: они раскладываются вокруг --lat/--lon, чтобы не слиться в одну
+     */
+    public string $spread = '5';
 
     public string $inPath = '@app/import/in';
     public string $successPath = '@app/import/success';
@@ -73,7 +87,7 @@ class ImportController extends Controller
 
     public function options($actionID): array
     {
-        return array_merge(parent::options($actionID), ['species', 'user', 'dryRun', 'json']);
+        return array_merge(parent::options($actionID), ['species', 'user', 'dryRun', 'json', 'lat', 'lon', 'spread']);
     }
 
     public function optionAliases(): array
@@ -93,6 +107,7 @@ class ImportController extends Controller
         try {
             $owner = $this->resolveOwner();
             $defaultSpecies = $this->resolveSpecies();
+            $this->applyDefaultCoordinates();
             $jsonFile = Yii::getAlias($this->json);
             $entries = is_file($jsonFile) ? $this->loadJson($jsonFile) : [];
         } catch (DomainException $e) {
@@ -147,7 +162,9 @@ class ImportController extends Controller
         $this->stdout(($this->dryRun ? 'ПРОБНЫЙ ПРОГОН, ничего не сохраняется. ' : '')
             . 'Заданий: ' . count($tasks) . ($entries ? ' (из ' . basename($jsonFile) . ': ' . count($entries) . ')' : '')
             . '. Владелец: ' . $owner->getPrivateName() . " (ID {$owner->id})"
-            . ($defaultSpecies ? ". Порода по умолчанию: {$defaultSpecies->name}" : '') . "\n\n");
+            . ($defaultSpecies ? ". Порода по умолчанию: {$defaultSpecies->name}" : '')
+            . ($this->importer->hasDefaultCoordinates() ? ". Координаты по умолчанию: {$this->lat}, {$this->lon} (шаг {$this->spread} м)" : '')
+            . "\n\n");
 
         $rows = [];
         $ok = $failed = $skipped = 0;
@@ -171,7 +188,8 @@ class ImportController extends Controller
                 } else {
                     $planting = $this->importer->import($file, $owner, $defaultSpecies, $task['overrides']);
                     $details = "посадка #{$planting->id}" . ($planting->isNamed() ? ', именная' : '')
-                        . ", {$planting->species->name}, {$planting->latitude}, {$planting->longitude}";
+                        . ", {$planting->species->name}, {$planting->latitude}, {$planting->longitude}"
+                        . ($this->importer->lastUsedDefaultCoordinates() ? ' (координаты по умолчанию)' : '');
                     try {
                         $moved = $this->moveTo($file, $success);
                         if ($moved !== basename($file)) {
@@ -254,6 +272,30 @@ class ImportController extends Controller
             return null;
         }
         return $this->findSpecies($this->species);
+    }
+
+    /**
+     * --lat/--lon/--spread → координаты по умолчанию в сервисе импорта.
+     * Десятичная запятая допускается: --lat=54,6703.
+     */
+    private function applyDefaultCoordinates(): void
+    {
+        $lat = $this->lat !== null ? str_replace(',', '.', trim($this->lat)) : '';
+        $lon = $this->lon !== null ? str_replace(',', '.', trim($this->lon)) : '';
+        if ($lat === '' && $lon === '') {
+            return;
+        }
+        if ($lat === '' || $lon === '') {
+            throw new DomainException('Координаты по умолчанию задаются парой: --lat=… --lon=…');
+        }
+        $spread = str_replace(',', '.', trim($this->spread));
+        if (!is_numeric($lat) || !is_numeric($lon) || !is_numeric($spread)) {
+            throw new DomainException('--lat, --lon и --spread должны быть числами, например --lat=54.6703 --lon=38.2469 --spread=5');
+        }
+        $this->lat = $lat;
+        $this->lon = $lon;
+        $this->spread = $spread;
+        $this->importer->setDefaultCoordinates((float)$lat, (float)$lon, (float)$spread);
     }
 
     /**
@@ -402,7 +444,7 @@ class ImportController extends Controller
         $data = $this->importer->prepare($file, $defaultSpecies, $overrides);
         $meta = $data['meta'];
         return ($data['named'] ? 'именная, ' : '') . "{$data['species']->name}, {$meta['latitude']}, {$meta['longitude']}"
-            . ($data['coordsFromData'] ? ' (из JSON)' : ' (из EXIF)')
+            . ($data['coordsFromDefault'] ? ' (по умолчанию)' : ($data['coordsFromData'] ? ' (из JSON)' : ' (из EXIF)'))
             . ($data['plantedAt'] ? ", {$data['plantedAt']}" : ', без даты')
             . ($meta['title'] ? ", «{$meta['title']}»" : '');
     }
