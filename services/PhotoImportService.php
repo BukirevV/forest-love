@@ -5,6 +5,7 @@ namespace app\services;
 use app\components\storage\StorageInterface;
 use app\enums\CoordsSource;
 use app\enums\ModerationAction;
+use app\enums\NamedStatus;
 use app\enums\PhotoSource;
 use app\enums\PhotoStatus;
 use app\enums\PlantingStatus;
@@ -187,25 +188,64 @@ class PhotoImportService
     }
 
     /**
-     * Создаёт опубликованную карточку из файла. Всё в одной транзакции: при любой ошибке
-     * в базе и хранилище ничего не остаётся.
+     * Проверяет файл и собирает данные будущей карточки (метаданные + $overrides), ничего не сохраняя.
+     * Используется и для пробного прогона.
      *
-     * @param TreeSpecies|null $defaultSpecies порода, если её не удалось определить по метаданным
-     * @throws DomainException с понятной причиной, если импорт невозможен
+     * @return array{mime: string, meta: array, species: TreeSpecies, coordsFromData: bool, plantedAt: ?string, named: bool}
+     * @throws DomainException
      */
-    public function import(string $path, User $owner, ?TreeSpecies $defaultSpecies = null): Planting
+    public function prepare(string $path, ?TreeSpecies $defaultSpecies = null, array $overrides = []): array
     {
         $mime = $this->checkFile($path);
         $meta = $this->readMetadata($path);
-        if ($meta['latitude'] === null || $meta['longitude'] === null) {
-            throw new DomainException('В метаданных нет GPS-координат.');
+
+        $coordsFromData = isset($overrides['latitude'], $overrides['longitude']);
+        if ($coordsFromData) {
+            $meta['latitude'] = (float)$overrides['latitude'];
+            $meta['longitude'] = (float)$overrides['longitude'];
         }
-        $species = $this->detectSpecies($meta) ?? $defaultSpecies;
+        if ($meta['latitude'] === null || $meta['longitude'] === null) {
+            throw new DomainException($overrides ? 'Нет координат ни в данных импорта, ни в метаданных фото.' : 'В метаданных нет GPS-координат.');
+        }
+        foreach (['title', 'description'] as $field) {
+            if (isset($overrides[$field]) && trim((string)$overrides[$field]) !== '') {
+                $meta[$field] = trim((string)$overrides[$field]);
+            }
+        }
+        $plantedAt = $overrides['planted_at'] ?? $meta['date'];
+
+        $species = $overrides['species'] ?? $this->detectSpecies($meta) ?? $defaultSpecies;
         if ($species === null) {
-            throw new DomainException('Не удалось определить породу по метаданным. Укажите породу по умолчанию: --species=…');
+            throw new DomainException('Не удалось определить породу. Укажите породу по умолчанию: --species=… (или поле "species" в plantings.json)');
+        }
+        $named = !empty($overrides['named']);
+        if ($named && ($meta['title'] === null || $meta['title'] === '')) {
+            throw new DomainException('Для именного дерева нужно имя (поле "name").');
         }
 
-        $takenAt = $meta['date'] ?? date('Y-m-d', (int)filemtime($path));
+        return compact('mime', 'meta', 'species', 'coordsFromData', 'plantedAt', 'named');
+    }
+
+    /**
+     * Создаёт опубликованную карточку из файла. Всё в одной транзакции: при любой ошибке
+     * в базе и хранилище ничего не остаётся.
+     *
+     * Данные из метаданных можно переопределить ($overrides, например из import/plantings.json):
+     *  - latitude, longitude — координаты (иначе из EXIF);
+     *  - species — порода (TreeSpecies);
+     *  - title, description, planted_at (Y-m-d);
+     *  - named — сделать дерево именным (бессрочно или до named_until, timestamp);
+     *  - comment — служебная пометка в журнал модерации (не публикуется).
+     *
+     * @param TreeSpecies|null $defaultSpecies порода, если её не удалось определить
+     * @throws DomainException с понятной причиной, если импорт невозможен
+     */
+    public function import(string $path, User $owner, ?TreeSpecies $defaultSpecies = null, array $overrides = []): Planting
+    {
+        ['mime' => $mime, 'meta' => $meta, 'species' => $species, 'coordsFromData' => $coordsFromData,
+            'plantedAt' => $plantedAt, 'named' => $named] = $this->prepare($path, $defaultSpecies, $overrides);
+
+        $takenAt = $meta['date'] ?? $plantedAt ?? date('Y-m-d', (int)filemtime($path));
         $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION)) ?: 'jpg';
         $size = @getimagesize($path) ?: [0, 0];
 
@@ -218,13 +258,15 @@ class PhotoImportService
                 'species_id' => $species->id,
                 'latitude' => $meta['latitude'],
                 'longitude' => $meta['longitude'],
-                'coords_source' => CoordsSource::Exif->value,
-                'planted_at' => $meta['date'],
+                'coords_source' => $coordsFromData ? CoordsSource::Manual->value : CoordsSource::Exif->value,
+                'planted_at' => $plantedAt,
                 'title' => $meta['title'] !== null ? mb_substr($meta['title'], 0, 150) : null,
                 'description' => $meta['description'] !== null ? mb_substr($meta['description'], 0, 5000) : null,
                 'status' => PlantingStatus::Approved->value,
                 'approved_at' => time(),
                 'moderated_by' => $owner->id,
+                'named_status' => $named ? NamedStatus::Active->value : NamedStatus::None->value,
+                'named_until' => $named && !empty($overrides['named_until']) ? (int)$overrides['named_until'] : null,
             ]);
             if (!$planting->save()) {
                 throw new DomainException('Карточка: ' . implode(' ', $planting->getFirstErrors()));
@@ -236,8 +278,8 @@ class PhotoImportService
                 'user_id' => $owner->id,
                 'file_path' => $storedPath,
                 'taken_at' => $takenAt,
-                'exif_latitude' => $meta['latitude'],
-                'exif_longitude' => $meta['longitude'],
+                'exif_latitude' => $coordsFromData ? null : $meta['latitude'],
+                'exif_longitude' => $coordsFromData ? null : $meta['longitude'],
                 'source' => PhotoSource::Upload->value,
                 'width' => (int)$size[0],
                 'height' => (int)$size[1],
@@ -257,7 +299,10 @@ class PhotoImportService
             (new ProcessPhotoJob(['photoId' => $photo->id]))->execute(null);
             $photo->refresh();
 
-            ModerationLog::log($planting, ModerationAction::Approve, 'Импорт из файла ' . basename($path), $owner->id);
+            $comment = 'Импорт из файла ' . basename($path)
+                . ($named ? ', именное: ' . $planting->title : '')
+                . (!empty($overrides['comment']) ? '. Примечание: ' . $overrides['comment'] : '');
+            ModerationLog::log($planting, ModerationAction::Approve, mb_substr($comment, 0, 1000), $owner->id);
             $tx->commit();
         } catch (\Throwable $e) {
             if ($photo !== null && !$photo->isNewRecord) {
