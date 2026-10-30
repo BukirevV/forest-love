@@ -17,6 +17,8 @@ $config = [
     'aliases' => [
         '@bower' => '@vendor/bower-asset',
         '@npm' => '@vendor/npm-asset',
+        '@storage' => '@app/storage',
+        '@uploads' => '@app/web/uploads',
     ],
     'container' => require __DIR__ . '/container.php',
     'modules' => [
@@ -81,7 +83,7 @@ if (YII_ENV_DEV) {
     $config['bootstrap'][] = 'debug';
     $config['modules']['debug'] = [
         'class' => 'yii\debug\Module',
-        'allowedIPs' => ['127.0.0.1', '::1'],
+        'allowedIPs' => ['127.0.0.1', '::1', '109.71.240.142'],
     ];
     $config['bootstrap'][] = 'gii';
     $config['modules']['gii'] = [

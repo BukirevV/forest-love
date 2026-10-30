@@ -15,6 +15,7 @@ $title = $tree->getDisplayTitle();
 $this->title = $title;
 $this->params['breadcrumbs'][] = $title;
 
+//Yii::debug($tree);
 // Open Graph
 $cover = $tree->mainPhoto?->isApproved() ? $tree->mainPhoto : ($tree->approvedPhotos ? end($tree->approvedPhotos) : null);
 $description = trim(($tree->species?->name ?? '') . ($tree->planted_at ? ', посажено ' . $f->asDate($tree->planted_at, 'long') : ''));
