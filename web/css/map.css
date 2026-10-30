@@ -55,3 +55,13 @@
 
 /* Элементы управления Leaflet под шапкой */
 .map-layout .leaflet-top { top: 60px; }
+
+/* Плашка разработчика в правом нижнем углу: поднимаем то, что там было */
+.map-layout .leaflet-bottom.leaflet-right { margin-bottom: 48px; }
+.map-banner--bottom-right { bottom: 56px; }
+.map-search-pulse { animation: map-search-pulse 1.3s ease-out 2; }
+@keyframes map-search-pulse { from { opacity: 1; } to { opacity: 0; } }
+@media (max-width: 767.98px) {
+    .map-filters { bottom: 56px; }
+    .tree-panel { padding-bottom: 56px; }
+}

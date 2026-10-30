@@ -37,6 +37,8 @@ $this->registerMetaTag(['name' => 'robots', 'content' => 'noindex']);
         <?= Html::a('Политика конфиденциальности', ['/site/privacy']) ?> · <?= Html::a('Соглашение', ['/site/terms']) ?>
     </p>
 </main>
+<?= $this->render('//partials/_made_by') ?>
+
 <?php $this->endBody() ?>
 </body>
 </html>
