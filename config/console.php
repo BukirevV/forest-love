@@ -19,6 +19,8 @@ $config = [
         '@tests' => '@app/tests',
         '@webroot' => '@app/web',
         '@web' => $_ENV['APP_URL'],
+        '@storage' => '@app/storage',
+        '@uploads' => '@web/uploads',
     ],
     'container' => require __DIR__ . '/container.php',
     'components' => array_merge($common, [
