@@ -208,7 +208,29 @@
         } else {
             loadTrees(); loadAds();
         }
-        return { map: map, reload: reload, openTree: openTree };
+        /**
+         * Показать дерево на карте без перезагрузки страницы (поиск в шапке):
+         * карта приближается к точке, загружает метки и открывает карточку.
+         */
+        function focusTree(id, lat, lng) {
+            if (lat != null && lng != null) {
+                map.setView([lat, lng], Math.max(map.getZoom(), 17));
+                openTree(id);
+                pulse([lat, lng]);
+                return;
+            }
+            fetch(url(cfg.urls.tree, id), { credentials: 'same-origin' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (d) { if (d) { focusTree(id, d.latitude, d.longitude); } else { setStatus('Дерево не найдено на карте.'); } });
+        }
+
+        /** Кратковременная подсветка найденной точки. */
+        function pulse(latlng) {
+            var ring = L.circleMarker(latlng, { radius: 26, color: '#e0a100', weight: 3, fill: false, interactive: false, className: 'map-search-pulse' }).addTo(map);
+            setTimeout(function () { map.removeLayer(ring); }, 2600);
+        }
+
+        return { map: map, reload: reload, openTree: openTree, focusTree: focusTree };
     }
 
     function locateControl(map, onFound, onError) {

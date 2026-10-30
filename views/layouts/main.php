@@ -47,6 +47,8 @@ $this->registerLinkTag(['rel' => 'icon', 'type' => 'image/svg+xml', 'href' => Yi
     </div>
 </footer>
 
+<?= $this->render('//partials/_made_by') ?>
+
 <?php $this->endBody() ?>
 </body>
 </html>

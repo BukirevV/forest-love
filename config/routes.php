@@ -8,6 +8,8 @@ return [
 
     'tree/<id:\d+>' => 'tree/view',
     'ad/<slug:[\w-]+>' => 'ad/view',
+    'search' => 'search/index',
+    'GET api/search/suggest' => 'search/suggest',
 
     'GET api/map/points' => 'map/points',
     'GET api/map/tree/<id:\d+>' => 'map/tree',
